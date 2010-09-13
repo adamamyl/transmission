@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# post-download:
+#    post-download actions script
+#
+
+set -x
+
+mailto=you@example.com
+mailfrom=you@example.org
+mailfile=/tmp/tmp_email.txt
+DIR=/nas/torrents
+TORRENT="${TR_TORRENT_NAME}"
+
+
+if [ -z $TORRENT ] ; then
+    echo "No torrent name specified. Arse" | mailx -s "Transmission post-download FAIL" ${mailto}
+    exit 0
+fi
+
+# move the torrent, firstly:
+
+if [ -e "${DIR}/${TORRENT}.move" ] ; then
+    echo "Move file exists"
+    DEST=`cat "${DIR}/${TORRENT}.move"`
+    if [ ! -d "${DEST}" ] ; then
+        mkdir -p  "${DEST}" || exit 0
+        chmod 2770 "${DEST}"
+    fi
+
+    echo "moving '${DIR}/${TORRENT}' to '${DEST}/'"
+    mv "${DIR}/${TORRENT}" "${DEST}/"
+    echo "making symlink for '${DEST}/${TORRENT}' in '${DIR}/${TORRENT}'"
+    ln -s "${DEST}/${TORRENT}" "${DIR}/${TORRENT}"
+    echo "Now removing the move file"
+    rm "${DIR}/${TORRENT}.move"
+fi
+
+# and now, some mailing...
+
+# echo "let the mailing begin"
+# Create the email message
+if [ -f "${mailfile}" ]; then
+	rm -f ${mailfile}
+fi
+
+touch ${mailfile}
+
+# Create the message headers
+echo "Date: `date -R`" >> ${mailfile}
+echo "From: Transmission <${mailfrom}>" >> ${mailfile}
+echo "To: Adam <${mailto}>" >> ${mailfile}
+echo "Subject:Torrent Done!" >> ${mailfile}
+echo "" >> ${mailfile}
+
+# Create the message body
+/bin/echo " Hostname: $HOSTNAME" >> ${mailfile}
+/bin/echo "Transmission finished downloading \"$TR_TORRENT_NAME\" on $TR_TIME_LOCALTIME" >> ${mailfile}
+/bin/echo "" >> ${mailfile}
+/usr/bin/file "${TORRENT}" >> ${mailfile}
+/bin/echo "" >> ${mailfile}
+
+/bin/cat ${mailfile} |/usr/sbin/sendmail -f ${mailfrom} ${mailto}
+
+rm -f ${mailfile}

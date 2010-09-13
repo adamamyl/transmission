@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# move-torrents:
+#    move torrents to a specified location, and symlink.
+#
+# Copyright (c) 2010 Adam McGreggor. All rights reserved.
+# Email: <adam@amyl.org.uk> Web: <http://blog.amyl.org.uk>
+#
+# $Id:$
+#
+
+set -e
+
+if [ -z "$1" ] ; then
+    echo "specify a filename as the only arguement, dear"
+    exit 1
+else
+    DIR=/nas/torrents
+    TORRENT="$1"
+
+    if [ -e "${DIR}/${TORRENT}.move" ] ; then
+        DEST=`cat "${DIR}/${TORRENT}.move"`
+        if [ ! -d "${DEST}" ] ; then
+            mkdir -p  "${DEST}"
+            chmod 2770
+        fi
+
+        mv "${DIR}/${TORRENT}" "${DEST}/"
+        ln -s "${DEST}/${TORRENT}" "${DIR}/${TORRENT}"
+        rm "${TORRENT}.move"
+    fi
+fi
